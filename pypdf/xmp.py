@@ -130,7 +130,7 @@ def _getter_bag(
 
     return get
 
-
+'''
 def _getter_seq(
     namespace: str, name: str, converter: Callable[[Any], Any] = _identity
 ) -> Callable[["XmpInformation"], Optional[List[Any]]]:
@@ -150,6 +150,40 @@ def _getter_seq(
             else:
                 value = converter(self._get_text(element))
                 retval.append(value)
+        ns_cache = self.cache.setdefault(namespace, {})
+        ns_cache[name] = retval
+        return retval
+
+    return get
+'''
+def _getter_seq(
+    namespace: str, name: str, converter: Callable[[Any], Any] = _identity
+) -> Callable[["XmpInformation"], Optional[List[Any]]]:
+    def get(self: "XmpInformation") -> Optional[List[Any]]:
+        cached = self.cache.get(namespace, {}).get(name)
+        if cached:
+            return cached
+        retval = []
+        for element in self.get_element("", namespace, name):
+            seqs = element.getElementsByTagNameNS(RDF_NAMESPACE, "Seq")
+            if len(seqs):
+                for seq in seqs:
+                    for item in seq.getElementsByTagNameNS(RDF_NAMESPACE, "li"):
+                        value = self._get_text(item)
+                        value = converter(value)
+                        retval.append(value)
+            else: #could be a rdf:Bag ? (out of specification but very common)
+                for element in self.get_element("", namespace, name):
+                    bags = element.getElementsByTagNameNS(RDF_NAMESPACE, "Bag")
+                    if len(bags):
+                        for bag in bags:
+                            for item in bag.getElementsByTagNameNS(RDF_NAMESPACE, "li"):
+                                value = self._get_text(item)
+                                retval.append(value)
+                    else: break
+            # If empty bags just treat it as an empty sequence (more close to specification)
+            value = converter(self._get_text(element))
+            retval.append(value)
         ns_cache = self.cache.setdefault(namespace, {})
         ns_cache[name] = retval
         return retval
