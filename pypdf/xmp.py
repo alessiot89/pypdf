@@ -130,6 +130,7 @@ def _getter_bag(
 
     return get
 
+
 '''
 def _getter_seq(
     namespace: str, name: str, converter: Callable[[Any], Any] = _identity
@@ -181,6 +182,8 @@ def _getter_seq(
                                 value = self._get_text(item)
                                 retval.append(value)
                     else: break
+                else: continue
+                break
             # If empty bags just treat it as an empty sequence (more close to specification)
             value = converter(self._get_text(element))
             retval.append(value)
